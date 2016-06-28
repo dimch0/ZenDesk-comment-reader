@@ -1,0 +1,47 @@
+# ZenDesk-comment-reader
+import sys
+from zdesk import Zendesk
+from pandas import DataFrame, ExcelWriter
+
+def main():
+    domain = 'https://domain.zendesk.com'
+    user = 'user@domain.com'
+    pwd = 'password'
+
+    zd = Zendesk(domain, user, pwd)
+
+    hours_table = {}
+
+    for ticket in zd.tickets_list()['tickets']:
+        status = ticket['status']
+        id = ticket['id']
+        for comment in zd.ticket_comments(id)['comments']:
+            if not comment['public']:
+                body = str(comment['body'])
+                if "time=" in body:
+                    body = body.replace("h", '')
+                    body = body.replace("time=", '')
+                    if not id in hours_table:
+                        hours_table[id] = [id, float(0.0), 'ongoing']
+                    hours_table[id][1] += float(body)
+                if "billed" in body:
+                    if not id in hours_table:
+                        hours_table[id] = [id, float(0.0), 'billed']
+                    hours_table[id][2] = "billed"
+                if status == "closed":
+                    if not id in hours_table:
+                        hours_table[id] = [id, float(0.0), 'closed']
+                    hours_table[id][2] = "closed"
+            #else:
+            #    if not id in hours_table:
+            #        hours_table[id] = [id, float(0.0), 'no hours']
+            #    hours_table[id][2] = "no hours"
+
+    writer = ExcelWriter('billing_hours.xlsx')
+    df = DataFrame(hours_table).T
+    print(df)
+    df.to_excel(writer, 'Sheet1', header=["Ticket ID", "Hours", "Status"], index=False)
+    writer.save()
+
+if __name__ == "__main__":
+    sys.exit(main())
