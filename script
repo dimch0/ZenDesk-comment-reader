@@ -1,47 +1,63 @@
-# ZenDesk-comment-reader
-import sys
 from zdesk import Zendesk
 from pandas import DataFrame, ExcelWriter
+from datetime import datetime
+from iso8601
+from pprint import pprint
+
 
 def main():
-    domain = 'https://domain.zendesk.com'
-    user = 'user@domain.com'
-    pwd = 'password'
+    start_time = datetime.now()
+    print "start", datetime.now()
+    DOMAIN = 'MY_DOMAIN'
+    USER = 'MY_USER'
+    PWD = 'MY_PASSWORD'
+    TIME_STRING = "time="
 
-    zd = Zendesk(domain, user, pwd)
+    zd = Zendesk(DOMAIN, USER, PWD)
 
-    hours_table = {}
+    data_table= {}
 
     for ticket in zd.tickets_list()['tickets']:
-        status = ticket['status']
-        id = ticket['id']
-        for comment in zd.ticket_comments(id)['comments']:
-            if not comment['public']:
-                body = str(comment['body'])
-                if "time=" in body:
-                    body = body.replace("h", '')
-                    body = body.replace("time=", '')
-                    if not id in hours_table:
-                        hours_table[id] = [id, float(0.0), 'ongoing']
-                    hours_table[id][1] += float(body)
-                if "billed" in body:
-                    if not id in hours_table:
-                        hours_table[id] = [id, float(0.0), 'billed']
-                    hours_table[id][2] = "billed"
-                if status == "closed":
-                    if not id in hours_table:
-                        hours_table[id] = [id, float(0.0), 'closed']
-                    hours_table[id][2] = "closed"
-            #else:
-            #    if not id in hours_table:
-            #        hours_table[id] = [id, float(0.0), 'no hours']
-            #    hours_table[id][2] = "no hours"
+        print "{0} Reading ticket: {1} ...".format(datetime.now(), ticket['id'])
+        ticket_id = ticket['id']
+        comments = zd.ticket_comments(ticket_id)['comments']
+        private_comments = [comment for comment in comments if not comment['public']]
+        for comment in private_comments:
+            # print "COMMENT"
+            # pprint(comment)
+            # return False
+
+            body = comment['body']
+            ts_created = comment['created_at']
+            print "DEBUG ts_created", ts_created
+            print "DEBUG 2 iso8601", iso8601.parse_date(ts_created)
+            return 1
+
+            if TIME_STRING in comment['body']:
+                body = body.replace("h", '')
+                body = body.replace(TIME_STRING, '')
+
+                if ticket_id not in data_table:
+                    data_table[ticket_id] = [ticket_id, float(0.0), 'ongoing', ts_created]
+                data_table[ticket_id][1] += float(body)
+
+            if "billed" in body:
+                if not ticket_id in data_table:
+                    data_table[ticket_id] = [ticket_id, float(0.0), 'billed', ts_created]
+                data_table[ticket_id][2] = "billed"
+
+            if ticket['status'] == "closed":
+                if not ticket_id in data_table:
+                    data_table[ticket_id] = [ticket_id, float(0.0), 'closed', ts_created]
+                data_table[ticket_id][2] = "closed"
 
     writer = ExcelWriter('billing_hours.xlsx')
-    df = DataFrame(hours_table).T
+    df = DataFrame(data_table).T
     print(df)
-    df.to_excel(writer, 'Sheet1', header=["Ticket ID", "Hours", "Status"], index=False)
+    df.to_excel(writer, 'Sheet1', header=["Ticket ID", "Hours", "Status", "Date"], index=False)
     writer.save()
 
-if __name__ == "__main__":
-    sys.exit(main())
+    print "time taken:", datetime.now() - start_time
+
+if __name__ == '__main__':
+    main()
