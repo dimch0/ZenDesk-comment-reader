@@ -1,16 +1,15 @@
 from zdesk import Zendesk
 from pandas import DataFrame, ExcelWriter
 from datetime import datetime
-from iso8601
+import iso8601
 from pprint import pprint
 
 
 def main():
     start_time = datetime.now()
     print "start", datetime.now()
-    DOMAIN = 'MY_DOMAIN'
-    USER = 'MY_USER'
-    PWD = 'MY_PASSWORD'
+
+
     TIME_STRING = "time="
 
     zd = Zendesk(DOMAIN, USER, PWD)
@@ -22,20 +21,18 @@ def main():
         ticket_id = ticket['id']
         comments = zd.ticket_comments(ticket_id)['comments']
         private_comments = [comment for comment in comments if not comment['public']]
-        for comment in private_comments:
-            # print "COMMENT"
-            # pprint(comment)
-            # return False
 
+        for comment in private_comments:
             body = comment['body']
-            ts_created = comment['created_at']
-            print "DEBUG ts_created", ts_created
-            print "DEBUG 2 iso8601", iso8601.parse_date(ts_created)
-            return 1
+            ts_created = iso8601.parse_date(comment['created_at'])
+            ts_created = ts_created.replace(tzinfo=None)
 
             if TIME_STRING in comment['body']:
                 body = body.replace("h", '')
                 body = body.replace(TIME_STRING, '')
+
+                print "KUR 1", ticket_id, body, ts_created
+
 
                 if ticket_id not in data_table:
                     data_table[ticket_id] = [ticket_id, float(0.0), 'ongoing', ts_created]
@@ -53,7 +50,9 @@ def main():
 
     writer = ExcelWriter('billing_hours.xlsx')
     df = DataFrame(data_table).T
+    df.sort_values(by=[3], ascending=False)
     print(df)
+    print "QQQ", list(df.columns.values)
     df.to_excel(writer, 'Sheet1', header=["Ticket ID", "Hours", "Status", "Date"], index=False)
     writer.save()
 
@@ -61,3 +60,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
