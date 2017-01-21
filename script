@@ -52,7 +52,6 @@ def main():
     df = DataFrame(data_table).T
     df.sort_values(by=[3], ascending=False)
     print(df)
-    print "QQQ", list(df.columns.values)
     df.to_excel(writer, 'Sheet1', header=["Ticket ID", "Hours", "Status", "Date"], index=False)
     writer.save()
 
