@@ -2,15 +2,16 @@ from zdesk import Zendesk
 from pandas import DataFrame, ExcelWriter
 from datetime import datetime
 import iso8601
-from pprint import pprint
 
+# CREDENTIALS
+DOMAIN = 'YOUR_DOMAIN'
+USER = 'YOUR_USER'
+PWD = 'YOUR_PASSWORD'
+TIME_STRING = "time="
 
 def main():
     start_time = datetime.now()
-    print "start", datetime.now()
-
-
-    TIME_STRING = "time="
+    print "Starting:", datetime.now()
 
     zd = Zendesk(DOMAIN, USER, PWD)
 
@@ -31,9 +32,6 @@ def main():
                 body = body.replace("h", '')
                 body = body.replace(TIME_STRING, '')
 
-                print "KUR 1", ticket_id, body, ts_created
-
-
                 if ticket_id not in data_table:
                     data_table[ticket_id] = [ticket_id, float(0.0), 'ongoing', ts_created]
                 data_table[ticket_id][1] += float(body)
@@ -50,7 +48,7 @@ def main():
 
     writer = ExcelWriter('billing_hours.xlsx')
     df = DataFrame(data_table).T
-    df.sort_values(by=[3], ascending=False)
+    df = df.sort_values(by=[3], ascending=[False])
     print(df)
     df.to_excel(writer, 'Sheet1', header=["Ticket ID", "Hours", "Status", "Date"], index=False)
     writer.save()
@@ -59,4 +57,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
