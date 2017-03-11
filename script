@@ -4,7 +4,7 @@ from datetime import datetime
 import iso8601
 
 # CREDENTIALS
-DOMAIN = 'YOUR_DOMAIN'
+DOMAIN = 'FULL_DOMAIN_HERE'
 USER = 'YOUR_USER'
 PWD = 'YOUR_PASSWORD'
 TIME_STRING = "time="
@@ -22,15 +22,18 @@ def main():
         ticket_id = ticket['id']
         comments = zd.ticket_comments(ticket_id)['comments']
         private_comments = [comment for comment in comments if not comment['public']]
+        time_entry = False
 
         for comment in private_comments:
             body = comment['body']
             ts_created = iso8601.parse_date(comment['created_at'])
             ts_created = ts_created.replace(tzinfo=None)
 
+
             if TIME_STRING in comment['body']:
                 body = body.replace("h", '')
                 body = body.replace(TIME_STRING, '')
+                time_entry = True
 
                 if ticket_id not in data_table:
                     data_table[ticket_id] = [ticket_id, float(0.0), 'ongoing', ts_created]
@@ -41,7 +44,7 @@ def main():
                     data_table[ticket_id] = [ticket_id, float(0.0), 'billed', ts_created]
                 data_table[ticket_id][2] = "billed"
 
-            if ticket['status'] == "closed":
+            if ticket['status'] == "closed" and time_entry:
                 if not ticket_id in data_table:
                     data_table[ticket_id] = [ticket_id, float(0.0), 'closed', ts_created]
                 data_table[ticket_id][2] = "closed"
